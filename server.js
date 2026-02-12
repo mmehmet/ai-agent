@@ -1,6 +1,3 @@
-require('dotenv').config()
-
-const fs = require('fs')
 const lancedb = require('@lancedb/lancedb')
 const { handleChat } = require('./modules/chat')
 const { handleResearch } = require('./modules/researcher')
@@ -42,14 +39,14 @@ const processQueue = async () => {
     reject(err)
   } finally {
     isProcessing = false
-    processQueue() // Keep the line moving
+    await processQueue() // Keep the line moving
   }
 }
 
 function enqueueTask(task) {
   return new Promise((resolve, reject) => {
     queue.push({ task, resolve, reject })
-    processQueue()
+    processQueue().then()
   })
 }
 
@@ -63,12 +60,8 @@ async function routeRequest(text, say=null) {
   console.debug(text)
   return await enqueueTask(async () => {
     const classifier = await ollama.chat({
-      model: 'llama3.2:3b',
-      messages: [
-        { role: 'system', content: fs.readFileSync('./prompts/router.txt', 'utf8') },
-        { role: 'user', content: text }
-      ],
-      options: { temperature: 0 }
+      model: 'research-intent',
+      messages: [{ role: 'user', content: text }]
     })
 
     const raw = classifier.message.content.trim().toUpperCase().replace(/[^A-Z]/g, '')
