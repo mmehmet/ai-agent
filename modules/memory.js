@@ -52,7 +52,7 @@ const initMemory = async () => {
             updated_at: new Date().toISOString(),
             confidence: 1.0,
             frequency: 1,
-            scope: null
+            scope: "global"
           }
         }])
       }
