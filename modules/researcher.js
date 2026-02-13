@@ -8,7 +8,7 @@ async function handleResearch(prompt, context) {
   const response = await ollama.chat({
     model: 'geek-research',
     messages: [
-      { role: 'system', content: `Context from previous conversations:\n${context}` },
+      ...context,
       { role: 'user', content: `Provide a comprehensive report on: ${prompt}` }
     ]
   })

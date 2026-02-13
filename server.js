@@ -12,6 +12,11 @@ const ollama = new Ollama()
 // RAG memory
 let db
 let table
+let isProcessing = false
+const queue = []
+const session = []
+const SESSION_WINDOW = 100
+
 ;(async () => {
   try {
     db = await lancedb.connect('data/memory_db')
@@ -25,14 +30,10 @@ let table
 
 
 
-// --- SERIALIZATION ENGINE ---
-let isProcessing = false
-const queue = []
-
 const processQueue = async () => {
   if (isProcessing || queue.length === 0) return
+
   isProcessing = true
-  
   const { task, resolve, reject } = queue.shift()
   try {
     const result = await task()
@@ -61,18 +62,15 @@ function enqueueTask(task) {
 async function routeRequest(text, say=null) {
   console.debug(text)
   return await enqueueTask(async () => {
+    const context = session.slice(-6)
     const classifier = await ollama.chat({
       model: 'research-intent',
-      messages: [{ role: 'user', content: text }]
+      messages: [...context, { role: 'user', content: text }]
     })
 
     const raw = classifier.message.content.trim().toUpperCase().replace(/[^A-Z]/g, '')
     const intent = (raw === "RESEARCH") ? raw : "CHAT"
     console.debug("row", raw, "intent", intent)
-
-    // history (Ideally use vector search here, but let's just get it working)
-    const history = await table.query().limit(10).toArray()
-    const context = history.map(h => h.text).join('\n')
 
     let reply
     if (intent === 'RESEARCH') {
@@ -81,11 +79,19 @@ async function routeRequest(text, say=null) {
     } else {
       reply = await handleChat(text, context)
     }
+    
+    if (reply !== null) {
+      session.push({ role: 'user', content: text })
+      session.push({ role: 'assistant', content: reply })
+      while (session.length > SESSION_WINDOW) {
+        session.shift()
+      }
+    }
 
-    // We save both the user's prompt and the reply so the context makes sense later
-    await table.add([{ 
-      text: `User: ${text}\nAssistant: ${reply}`
-    }])
+    // TODO: update the vector table
+    // await table.add([{ 
+    //   text: `User: ${text}\nAssistant: ${reply}`
+    // }])
 
     return reply
   })
