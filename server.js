@@ -58,7 +58,7 @@ async function routeRequest(text, say=null) {
     }
     
     if (reply !== null) {
-      addTurn(text, reply)
+      addTurn(text, reply, ollama).then()
     }
 
     return reply
