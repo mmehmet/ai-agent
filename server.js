@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const lancedb = require('@lancedb/lancedb')
 const { handleChat } = require('./modules/chat')
 const { handleResearch } = require('./modules/researcher')
