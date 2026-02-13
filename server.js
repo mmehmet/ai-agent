@@ -3,11 +3,20 @@ require('dotenv').config()
 const { handleChat } = require('./modules/chat')
 const { handleResearch } = require('./modules/researcher')
 const { initDiscord } = require('./modules/discord')
-const { initMemory, addTurn, getContext } = require('./modules/memory')
+const { initMemory, addTurn, getContext, mine } = require('./modules/memory')
 const { initSlack } = require('./modules/slack')
 const { Ollama } = require('ollama')
 
 const ollama = new Ollama()
+
+const COMMANDS = {
+  '/sleep': async () => {
+    console.log("💤 Manual sleep triggered. Starting consolidation...")
+    await mine(ollama) 
+    return "Sleep cycle complete. Memory consolidated."
+  }
+  // Future commands (e.g., '/tasks', '/clear') go here
+}
 
 const queue = []
 let isProcessing = false
@@ -38,6 +47,16 @@ function enqueueTask(task) {
 // Centralized Routing Logic
 async function routeRequest(text, say=null) {
   console.debug(text)
+  const firstWord = text.split(' ')[0].toLowerCase()
+  
+  if (COMMANDS[firstWord]) {
+    if (say) await say("doing it")
+
+    return await enqueueTask(async () => {
+      return await COMMANDS[firstWord](ollama)
+    })
+  }
+
   return await enqueueTask(async () => {
     const context = getContext()
     const classifier = await ollama.chat({
