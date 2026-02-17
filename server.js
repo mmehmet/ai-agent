@@ -10,7 +10,7 @@ const { Ollama } = require('ollama')
 const ollama = new Ollama()
 
 const COMMANDS = {
-  '/sleep': async () => {
+  '!sleep': async () => {
     console.log("💤 Manual sleep triggered. Starting consolidation...")
     await mine(ollama) 
     return "Sleep cycle complete. Memory consolidated."
